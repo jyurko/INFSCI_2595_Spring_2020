@@ -9,6 +9,6 @@ This course provides an overview of popular supervised learning methods, ranging
 ### Week 02
 * Bernoulli, Binomial, Beta, and Gaussian distributions  
 * Maximum Likelihood Estimates (MLEs)  
-* Bayesian formulations, conjugate priors  
+* Bayesian approach with conjugate priors  
 * Uncertainty and credible intervals  
 * Sample size effects  
