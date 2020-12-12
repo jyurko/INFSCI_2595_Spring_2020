@@ -1,0 +1,187 @@
+---
+title: "INFSCI 2595 Fall 2020: Office hours"
+subtitle: "Matrix math and debugging"
+author: "Dr. Joseph P. Yurko"
+date: "9/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, load_packages}
+library(tidyverse)
+```
+
+Make a matrix to represent a design matrix.  
+
+```{r, make_a_matrix}
+set.seed(71231)
+X <- cbind(rep(1, 7), rnorm(7))
+
+colnames(X) <- c("(Intercept)", "x1")
+```
+
+```{r}
+X
+```
+
+Make the coefficient vector.  
+
+```{r}
+beta_vec <- c(1.2, 2.5)
+
+class(beta_vec)
+
+length(beta_vec)
+
+dim(beta_vec)
+```
+
+To convert the "regular" vector to a matrix data type we can use either `as.matrix()` or `matrix()`.  
+
+```{r}
+as.matrix(beta_vec)
+
+class(as.matrix(beta_vec))
+```
+
+```{r}
+matrix(beta_vec)
+
+class(matrix(beta_vec))
+```
+
+We could force 1 row and 2 columns by:  
+
+```{r}
+matrix(beta_vec, nrow = 1)
+```
+
+We want to calculate the mean trend vector using matrix math:  
+
+$$ 
+\boldsymbol{\mu} = \mathbf{X} \boldsymbol{\beta}
+$$
+
+The design matrix has $N$ rows and $D+1$ columns. With a single input, $D=1$, the design matrix has 2 columns. To matrix multiply $\mathbf{X}$ and $\boldsymbol{\beta}$ the coefficient column vector must be 2 rows by 1 column.  
+
+```{r}
+X %*% matrix(beta_vec)
+```
+
+What happens if we use the $\boldsymbol{\beta}$ vector as a row vector?  
+
+```{r}
+X %*% matrix(beta_vec, nrow = 1)
+```
+
+What would happen if we tried $\boldsymbol{\beta} \mathbf{X}$?  
+
+```{r}
+matrix(beta_vec) %*% X
+```
+
+```{r}
+matrix(beta_vec)
+```
+
+What happens if we did not convert from a regular vector a matrix and we used `*` instead of `%*%`?  
+
+```{r}
+beta_vec * X
+```
+
+What happens if we had the design matrix first?  
+
+```{r}
+X * beta_vec
+```
+
+So these are incorrect, because we should have 1 and only 1 mean value, $\mu_n$, per observation.  
+
+```{r}
+beta_vec * X[1, ]
+```
+
+```{r}
+beta_vec * X[7, ]
+```
+
+Element wise multiplication takes each element of `beta_vec` and multiplies it by the corresponding column in `X` and repeats that action for every row in `X`.  
+
+That is NOT what we want, because we want the INNER PRODUCT of each row of the design matrix with the coefficient vector.  
+
+```{r}
+as.vector(beta_vec[1] * X[1, 1] + beta_vec[2] * X[1, 2])
+```
+
+Check with the first row of the mean trend vector calculated by the matrix math.  
+
+```{r}
+X %*% matrix(beta_vec)
+```
+
+Check again with the second observation.  
+
+```{r}
+as.vector(beta_vec[1] * X[2, 1] + beta_vec[2] * X[2, 2])
+```
+
+This is different than, multiplying every element in the design matrix, $\mathbf{X}$, by the slope, $\beta_1$ (`beta_vec[1]`) and adding in the intercept, as shown below:  
+
+```{r}
+beta_vec[1] + beta_vec[2] * X
+```
+
+Let's see how we can debug our functions that use matrix multiplication.  
+
+```{r}
+my_function <- function(unknowns, my_info)
+{
+  Xmat <- my_info$the_matrix_x
+  
+  # enter debug mode with browser()
+  # browser()
+  
+  # force a return as a "hack" to debugging
+  # return( dim(unknowns) )
+  
+  # first attempt, is this correct?  does the fucntion crash?
+  # mu <- unknowns[1] + unknowns[2] * Xmat
+  
+  # second attempt, is this correct? does the function crash?
+  mu <- unknowns %*% Xmat
+  
+  # by default the very last line in a function is returned
+  sum(dnorm(x = my_info$yobs,
+            mean = mu,
+            sd = my_info$sd_use))
+}
+```
+
+Create the list of required information by first generating some random responses around the mean.  
+
+```{r}
+set.seed(61123)
+y <- rnorm(n = nrow(X), mean = as.vector(X %*% matrix(beta_vec)), sd = 1)
+```
+
+```{r}
+info_use <- list(
+  the_matrix_x = X,
+  yobs = y,
+  sd_use = 1
+)
+```
+
+Call our function, are we correct? Do we have an error?    
+
+```{r}
+my_function(beta_vec, info_use)
+```
+
+Use the debugger, via the `browser()` function. Uncomment out the line with `browser()` in the `my_function()` function and then rerun the code chunk to assign the modified function to `my_function()`. Run the code chunk above to launch debug mode! Within debug mode, RStudio will open a new Tab with a "glasses" icon to denote "inspection mode". You will be inside the `my_function()` workspace with access to the variables just as `my_function()` sees things. You can then test out operations in the console and use the Next/Run/Stop buttons to work proceed through the function. This is a useful way to test out errors inside functions.  
+
+Alternatively, you can "hack" debugging by forcing returns. I like this approach when I just want to print out values to the screen as I build up the pieces of a function. Try commenting the line with `browser()` and uncomment the line with `return (dim(unknowns) )`, then rerun the code chunk to reassign `my_function()`. You will now have `my_function()` return the dimensions of the `unknowns` object, and then it exits without proceeding further.  
